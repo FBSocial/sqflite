@@ -76,6 +76,8 @@ public class SqflitePlugin implements FlutterPlugin, MethodCallHandler {
 
     static private final Object databaseMapLocker = new Object();
     static private final Object openCloseLocker = new Object();
+    static private final Object handlerLocker = new Object();
+
     // local cache
     static String databasesPath;
     private Context context;
@@ -1005,6 +1007,11 @@ public class SqflitePlugin implements FlutterPlugin, MethodCallHandler {
                 onDebugModeCall(call, result);
                 break;
             }
+            //专门用于写入操作的新方法（单独线程）
+            case "batchWrite": {
+                onBatchWriteCall(call, result);
+                break;
+            }
             default:
                 result.notImplemented();
                 break;
@@ -1078,4 +1085,61 @@ public class SqflitePlugin implements FlutterPlugin, MethodCallHandler {
             });
         }
     }
+
+    //单独的写入方法
+    private void onBatchWriteCall(final MethodCall call, Result result) {
+        Log.d("getChat", "getChat ----> onBatchWriteCall");
+        final BgResult bgResult = new BgResult(result);
+        String path = call.argument(PARAM_PATH);
+        Integer databaseId = _singleInstancesByPath.get(path);
+        if (databaseId == null) {
+            bgResult.success(null);
+            return;
+        }
+        final Database database = databaseMap.get(databaseId);
+        Log.d("getChat", "getChat ----> databaseId:" + databaseId);
+        if (database == null) {
+            bgResult.success(null);
+            return;
+        }
+        final List<String> sqlList = (List<String>)call.argument(PARAM_SQL);
+        if (sqlList == null || sqlList.size() == 0){
+            bgResult.success(null);
+            return;
+        }
+        getWriteHandler().post(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    database.getWritableDatabase().beginTransaction();
+                    Log.d("getChat", "getChat -> execSQL sql.size:" + sqlList.size());
+                    for (String sql: sqlList) {
+                        database.getWritableDatabase().execSQL(sql);
+                    }
+                    database.getWritableDatabase().setTransactionSuccessful();
+                    database.getWritableDatabase().endTransaction();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    bgResult.error("sqlite error", "batchWrite Exception:" + e.getMessage(), null);
+                    return;
+                }
+                Log.d("getChat", "getChat -------> execSQL end");
+                bgResult.success(null);
+            }
+        });
+    }
+
+    static Handler writeHandler;
+    //获取写入线程的Handler
+    static Handler getWriteHandler(){
+        Log.d("getChat", "getChat --- getWriteHandler:" + writeHandler);
+        synchronized (handlerLocker){
+            if (writeHandler != null) return writeHandler;
+            HandlerThread hr = new HandlerThread("writeData", SqflitePlugin.THREAD_PRIORITY);
+            hr.start();
+            writeHandler = new Handler(hr.getLooper());
+            return writeHandler;
+        }
+    }
+
 }

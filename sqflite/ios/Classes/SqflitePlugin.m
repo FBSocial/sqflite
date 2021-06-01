@@ -21,6 +21,7 @@ static NSString *const _methodInsert = @"insert";
 static NSString *const _methodUpdate = @"update";
 static NSString *const _methodQuery = @"query";
 static NSString *const _methodBatch = @"batch";
+static NSString *const _methodBatchWrite = @"batchWrite";
 
 // For open
 static NSString *const _paramReadOnly = @"readOnly";
@@ -420,6 +421,7 @@ static NSInteger _databaseOpenCount = 0;
     if (database == nil) {
         return;
     }
+    
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         [database.fmDatabaseQueue inDatabase:^(FMDatabase *db) {
             SqfliteMethodCallOperation* operation = [SqfliteMethodCallOperation newWithCall:call result:result];
@@ -530,6 +532,35 @@ static NSInteger _databaseOpenCount = 0;
     
 }
 
+//
+// batch
+//
+- (void)handleBatchWriteCall:(FlutterMethodCall*)call result:(FlutterResult)result {
+    NSString* path = call.arguments[_paramPath];
+    NSArray* sqlList = call.arguments[SqfliteParamSql];
+    
+    SqfliteDatabase* database = self.singleInstanceDatabaseMap[path];
+    if (database == nil) {
+        result(nil);
+        return;
+    }
+    
+    [database.fmDatabaseQueue inImmediateTransaction:^(FMDatabase * _Nonnull db, BOOL * _Nonnull rollback) {
+        @try {
+            for  (NSString *sql in sqlList) {
+                [db executeUpdate:sql];
+            }
+        } @catch (NSException *exception) {
+            *rollback = YES;
+            result([FlutterError errorWithCode:@"0" message:@"sql execute error" details:nil]);
+            return;
+        } @finally {
+            *rollback = NO;
+            result(nil);
+        }
+    }];
+}
+    
 //
 // batch
 //
@@ -675,7 +706,7 @@ static NSInteger _databaseOpenCount = 0;
             // Ingore the error, it will break later during open
         }
     }
-    FMDatabaseQueue *queue = [FMDatabaseQueue databaseQueueWithPath:path flags:(readOnly ? SQLITE_OPEN_READONLY : (SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))];
+    FMDatabaseQueue *queue = [FMDatabaseQueue databaseQueueWithPath:path flags:(readOnly ? SQLITE_OPEN_READONLY : (SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE)) | SQLITE_OPEN_WAL];
     bool success = queue != nil;
     
     if (!success) {
@@ -896,6 +927,8 @@ static NSInteger _databaseOpenCount = 0;
         [self handleExecuteCall:call result:wrappedResult];
     } else if ([_methodBatch isEqualToString:call.method]) {
         [self handleBatchCall:call result:wrappedResult];
+    } else if ([_methodBatchWrite isEqualToString:call.method]) {
+        [self handleBatchWriteCall:call result:wrappedResult];
     } else if ([_methodGetDatabasesPath isEqualToString:call.method]) {
         [self handleGetDatabasesPath:call result:result];
     } else if ([_methodCloseDatabase isEqualToString:call.method]) {

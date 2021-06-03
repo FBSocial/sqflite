@@ -545,22 +545,20 @@ static NSInteger _databaseOpenCount = 0;
         return;
     }
     
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
-        [database.fmDatabaseQueue inImmediateTransaction:^(FMDatabase * _Nonnull db, BOOL * _Nonnull rollback) {
-            @try {
-                for  (NSString *sql in sqlList) {
-                    [db executeUpdate:sql];
-                }
-            } @catch (NSException *exception) {
-                *rollback = YES;
-                result([FlutterError errorWithCode:@"0" message:@"sql execute error" details:nil]);
-                return;
-            } @finally {
-                *rollback = NO;
-                result(nil);
+    [database.fmDatabaseQueue inImmediateTransaction:^(FMDatabase * _Nonnull db, BOOL * _Nonnull rollback) {
+        @try {
+            for  (NSString *sql in sqlList) {
+                [db executeUpdate:sql];
             }
-        }];
-    });
+        } @catch (NSException *exception) {
+            *rollback = YES;
+            result([FlutterError errorWithCode:@"0" message:@"sql execute error" details:nil]);
+            return;
+        } @finally {
+            *rollback = NO;
+            result(nil);
+        }
+    }];
 }
     
 //

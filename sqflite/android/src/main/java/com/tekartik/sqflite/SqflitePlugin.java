@@ -1121,6 +1121,7 @@ public class SqflitePlugin implements FlutterPlugin, MethodCallHandler {
                 } catch (Exception e) {
                     e.printStackTrace();
                     bgResult.error("sqlite error", "batchWrite Exception:" + e.getMessage(), null);
+                    database.getWritableDatabase().endTransaction();
                     return;
                 }
                 Log.d("getChat", "getChat -------> execSQL end");

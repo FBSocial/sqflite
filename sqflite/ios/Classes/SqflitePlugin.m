@@ -545,10 +545,15 @@ static NSInteger _databaseOpenCount = 0;
         return;
     }
     
+    
+    
     [database.fmDatabaseQueue inImmediateTransaction:^(FMDatabase * _Nonnull db, BOOL * _Nonnull rollback) {
+        NSString *errorSql;
         @try {
             for  (NSString *sql in sqlList) {
-                [db executeUpdate:sql];
+                if (![db executeUpdate:sql]) {
+                    errorSql = sql;
+                };
             }
         } @catch (NSException *exception) {
             *rollback = YES;
@@ -556,7 +561,12 @@ static NSInteger _databaseOpenCount = 0;
             return;
         } @finally {
             *rollback = NO;
-            result(nil);
+            if (errorSql) {
+                result([FlutterError errorWithCode:@"0" message:[NSString stringWithFormat:@"sql execute error sql:%@",errorSql] details:nil]);
+            } else {
+                result(nil);
+            }
+            
         }
     }];
 }

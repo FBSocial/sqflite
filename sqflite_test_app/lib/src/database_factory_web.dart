@@ -1,6 +1,10 @@
 import 'package:sqflite_common/sqlite_api.dart';
-import 'package:sqflite_common/src/mixin/import_mixin.dart';
+// ignore: implementation_imports
 import 'package:sqflite_common/src/method_call.dart';
+// ignore: implementation_imports
+import 'package:sqflite_common/src/mixin/import_mixin.dart';
+
+// ignore_for_file: avoid_print
 
 DatabaseFactory? _databaseFactoryWebImpl;
 
@@ -8,7 +12,7 @@ DatabaseFactory? _databaseFactoryWebImpl;
 DatabaseFactory get databaseFactoryWeb =>
     _databaseFactoryWebImpl ??= buildDatabaseFactory(
         invokeMethod: (String method, [dynamic arguments]) {
-      var methodCall = SqfliteMethodCall(method, arguments);
+      final methodCall = SqfliteMethodCall(method, arguments);
       return methodCall.handle();
     });
 
@@ -22,7 +26,7 @@ extension WebMethodCallHandler on SqfliteMethodCall {
       if (_debug) {
         print('main_send: $this');
       }
-      var result = 'TODO';
+      const result = 'TODO';
 
       ///
       /// TODO Implement Web support

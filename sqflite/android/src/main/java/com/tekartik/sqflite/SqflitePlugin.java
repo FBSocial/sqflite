@@ -1111,17 +1111,28 @@ public class SqflitePlugin implements FlutterPlugin, MethodCallHandler {
             @Override
             public void run() {
                 try {
-                    database.getWritableDatabase().beginTransaction();
-                    Log.d("getChat", "getChat -> execSQL sql.size:" + sqlList.size());
-                    for (String sql: sqlList) {
-                        database.getWritableDatabase().execSQL(sql);
+                    if (!database.getWritableDatabase().isOpen()) {
+                        bgResult.error("sqlite error", "batchWrite Exception: database closed", null);
+                        return;
                     }
+                    if (database.getWritableDatabase().inTransaction()) {
+                        bgResult.error("sqlite error", "batchWrite Exception: database intransaction", null);
+                        return;
+                    }
+
+                    database.getWritableDatabase().beginTransaction();
+                    for (String sql: sqlList) database.getWritableDatabase().execSQL(sql);
                     database.getWritableDatabase().setTransactionSuccessful();
                     database.getWritableDatabase().endTransaction();
                 } catch (Exception e) {
                     e.printStackTrace();
-                    bgResult.error("sqlite error", "batchWrite Exception:" + e.getMessage(), null);
-                    database.getWritableDatabase().endTransaction();
+                    try {
+                        database.getWritableDatabase().endTransaction();
+                    }catch (Exception e1) {
+                        e1.printStackTrace();
+                    }finally {
+                        bgResult.error("sqlite error", "batchWrite Exception:" + e.getMessage(), null);
+                    }
                     return;
                 }
                 Log.d("getChat", "getChat -------> execSQL end");

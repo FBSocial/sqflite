@@ -474,12 +474,14 @@ mixin SqfliteDatabaseMixin implements SqfliteDatabase {
     }
   }
 
-  Future<T> _runTransaction<T>(
+   Future<T> _runTransaction<T>(
       Transaction? txn, Future<T> Function(Transaction txn) action,
       {bool? exclusive}) async {
     bool? successfull;
     if (transactionRefCount == 0) {
       txn = await beginTransaction(exclusive: exclusive);
+      final sqfliteTransaction = txn as SqfliteTransaction;
+      beginTxn = sqfliteTransaction;
     }
     // Update the ref count after a successful begin
     transactionRefCount++;
@@ -489,9 +491,17 @@ mixin SqfliteDatabaseMixin implements SqfliteDatabase {
       successfull = true;
     } finally {
       if (--transactionRefCount == 0) {
-        final sqfliteTransaction = txn as SqfliteTransaction;
-        sqfliteTransaction.successful = successfull;
-        await endTransaction(sqfliteTransaction);
+        try {
+          final sqfliteTransaction = txn as SqfliteTransaction;
+          sqfliteTransaction.successful = successfull;
+          await endTransaction(sqfliteTransaction);
+          beginTxn = null;
+        } catch (_) {
+          if (beginTxn != null) {
+            await txnExecute<dynamic>(beginTxn, 'ROLLBACK');
+            beginTxn = null;
+          }
+        }
       }
     }
     return result;

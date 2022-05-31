@@ -1012,6 +1012,10 @@ public class SqflitePlugin implements FlutterPlugin, MethodCallHandler {
                 onBatchWriteCall(call, result);
                 break;
             }
+            case "changeFuture": {
+                result.success(null);
+                break;
+            }
             default:
                 result.notImplemented();
                 break;

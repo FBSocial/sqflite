@@ -22,6 +22,7 @@ static NSString *const _methodUpdate = @"update";
 static NSString *const _methodQuery = @"query";
 static NSString *const _methodBatch = @"batch";
 static NSString *const _methodBatchWrite = @"batchWrite";
+static NSString *const _methodFeature = @"changeFuture";
 
 // For open
 static NSString *const _paramReadOnly = @"readOnly";
@@ -535,6 +536,11 @@ static NSInteger _databaseOpenCount = 0;
 //
 // batch
 //
+
+- (void)handleBatchFutureCall:(FlutterMethodCall*)call result:(FlutterResult)result {
+    result(nil);
+}
+
 - (void)handleBatchWriteCall:(FlutterMethodCall*)call result:(FlutterResult)result {
     NSString* path = call.arguments[_paramPath];
     NSArray* sqlList = call.arguments[SqfliteParamSql];
@@ -939,6 +945,8 @@ static NSInteger _databaseOpenCount = 0;
         [self handleBatchCall:call result:wrappedResult];
     } else if ([_methodBatchWrite isEqualToString:call.method]) {
         [self handleBatchWriteCall:call result:wrappedResult];
+    } else if ([_methodFeature isEqualToString:call.method]) {
+        [self handleBatchFutureCall:call result:wrappedResult];
     } else if ([_methodGetDatabasesPath isEqualToString:call.method]) {
         [self handleGetDatabasesPath:call result:result];
     } else if ([_methodCloseDatabase isEqualToString:call.method]) {

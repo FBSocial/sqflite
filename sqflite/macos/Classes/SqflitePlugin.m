@@ -866,8 +866,10 @@ static NSInteger _databaseOpenCount = 0;
 // returns the Documents directory on iOS
 //
 - (void)handleGetDatabasesPath:(FlutterMethodCall*)call result:(FlutterResult)result {
-    NSArray* paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-    result(paths.firstObject);
+    // macos端将DatabasesPath由 Document文件夹 改为 ApplicationSupport文件夹
+    NSArray* paths = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES);
+    // path_provider 在ApplicationSupport后面做了拼接包名处理 在此处做相同处理
+    result([paths.firstObject stringByAppendingPathComponent: [[NSBundle mainBundle] bundleIdentifier]]);
 }
 
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {

@@ -25,9 +25,8 @@ class Database {
     }
 
     public void open() {
-        Log.d("getChat", "getChat openDatabase -> wal");
         sqliteDatabase = SQLiteDatabase.openDatabase(path, null,
-                SQLiteDatabase.CREATE_IF_NECESSARY | SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING);
+                SQLiteDatabase.CREATE_IF_NECESSARY);
     }
 
     // Change default error handler to avoid erasing the existing file.
